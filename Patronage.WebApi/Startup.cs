@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using TodoApi.Models;
-using TodoApi.Repository;
+using Patronage.Application.FizzBuzz.Queries;
+using Patronage.Application.Interfaces;
+using Patronage.Infrastructure;
+using Patronage.Infrastructure.Middlewares;
+using Patronage.Infrastructure.Services;
+using Patronage.Infrastucture;
 using Swashbuckle.AspNetCore.Swagger;
 
-namespace TodoApi
+namespace Patronage.WebApi
 {
     public class Startup
     {
@@ -27,14 +25,24 @@ namespace TodoApi
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddScoped<IPatronageRepository, PatronageRepository>();
+        {   
+            //Services
+            services.AddTransient<IFizzBuzzService, FizzBuzzService>();
+            services.AddTransient<IMockIOService, MockIOService>();
+            services.AddTransient<ILogger, LoggerService>();
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            //MediatR
+            services.AddMediatR(
+                typeof(GetFizzBuzzQueryHandler).Assembly
+                );
 
+            services.AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+
+            //Swagger
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info { Title = "My API", Version = "v1" });
+                c.SwaggerDoc("v1", new Info { Title = "Patronage API", Version = "v1" });
             });
         }
 
@@ -50,16 +58,17 @@ namespace TodoApi
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            app.UseMiddleware<RequestResponseLoggingMiddleware>();
+            app.UseMiddleware<ExceptionHandlerMiddleware>();
 
+            app.UseHttpsRedirection();
             app.UseMvc();
 
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Patronage API V1");
             });
-
         }
     }
 }
